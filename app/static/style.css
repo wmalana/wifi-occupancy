@@ -88,6 +88,19 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
   color: #999;
 }
 
+/* Data freshness dot */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.dot-fresh { background: #2e7d32; }  /* green  — under 20 min */
+.dot-aging { background: #f9a825; }  /* yellow — under 1 hour */
+.dot-stale { background: #c62828; }  /* red    — over 1 hour */
+
 /* Chart section */
 #chart-section {
   background: #fff;
