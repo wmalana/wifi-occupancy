@@ -100,35 +100,29 @@ def test_region_base_url_with_api_path(monkeypatch):
     assert url == "https://api.eu.mist.com/api/v1/sites/abc123/stats/clients"
 
 
-def test_missing_token_returns_zeros(monkeypatch):
-    """No API token -> return zero counts, never call the API."""
+def test_missing_token_returns_none(monkeypatch):
+    """No API token -> signal failure (None), never call the API."""
     monkeypatch.delenv("MIST_API_TOKEN", raising=False)
     collector = MistCollector("site-1", {"mist_site_id": "abc123"})
 
-    counts = collector.collect(SSIDS)
-
-    assert counts == {"grainger": 0, "wwg-net": 0}
+    assert collector.collect(SSIDS) is None
 
 
-def test_missing_site_id_returns_zeros(monkeypatch):
-    """No mist_site_id in config -> return zero counts."""
+def test_missing_site_id_returns_none(monkeypatch):
+    """No mist_site_id in config -> signal failure (None)."""
     monkeypatch.setenv("MIST_API_TOKEN", "fake-token")
     collector = MistCollector("site-1", {})  # no mist_site_id
 
-    counts = collector.collect(SSIDS)
-
-    assert counts == {"grainger": 0, "wwg-net": 0}
+    assert collector.collect(SSIDS) is None
 
 
-def test_api_error_returns_zeros(monkeypatch):
-    """If the API call fails, the collector swallows it and returns zeros.
+def test_api_error_returns_none(monkeypatch):
+    """If the API call fails, return None so the scheduler skips writing.
 
-    The scheduler relies on this: one broken site must not break the poll.
+    Recording zeros here would look like an empty site and pollute history.
     """
     monkeypatch.setenv("MIST_API_TOKEN", "fake-token")
     collector = MistCollector("site-1", {"mist_site_id": "abc123"})
 
     with patch("app.collectors.mist.httpx.Client", _fake_httpx_client(raise_status=True)):
-        counts = collector.collect(SSIDS)
-
-    assert counts == {"grainger": 0, "wwg-net": 0}
+        assert collector.collect(SSIDS) is None

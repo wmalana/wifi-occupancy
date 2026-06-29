@@ -9,5 +9,11 @@ class BaseCollector(ABC):
         self.config = config
 
     @abstractmethod
-    def collect(self, ssids: list[str]) -> dict[str, int]:
-        """Collect client counts for each SSID. Returns {ssid: count}."""
+    def collect(self, ssids: list[str]) -> dict[str, int] | None:
+        """Collect client counts for each SSID.
+
+        Returns {ssid: count} on success. Returns None to signal the poll
+        failed (bad credentials, network error, etc.) so the scheduler can
+        skip writing rather than record misleading zero counts. A successful
+        poll that genuinely finds no clients still returns a dict of zeros.
+        """

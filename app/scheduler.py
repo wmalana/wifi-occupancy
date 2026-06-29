@@ -73,7 +73,13 @@ def poll_all_sites():
                 counts = collector.collect(ssids)
             except Exception as exc:
                 logger.error("site %s collector error: %s", site_id, exc)
-                counts = {s: 0 for s in ssids}
+                counts = None
+
+            # A failed poll returns None: skip writing so we keep the last good
+            # data rather than recording misleading zeros.
+            if counts is None:
+                logger.warning("site %s poll failed; keeping previous data", site_id)
+                continue
 
             for ssid, count in counts.items():
                 db.add(ClientCount(
