@@ -85,8 +85,8 @@ def test_tally_ignores_unknown_wlan_ids():
     assert tally_ssids({"1": "grainger"}, {"1": 4, "0": 1}, SSIDS) == {"grainger": 4, "wwg-net": 0}
 
 
-def test_collect_missing_credentials_returns_zeros(monkeypatch):
+def test_collect_missing_credentials_returns_none(monkeypatch):
     monkeypatch.delenv("CISCO_USER", raising=False)
     monkeypatch.delenv("CISCO_PASS", raising=False)
     collector = Cisco9800CliCollector("site-1", {"host": "10.0.0.1"})
-    assert collector.collect(SSIDS) == {"grainger": 0, "wwg-net": 0}
+    assert collector.collect(SSIDS) is None

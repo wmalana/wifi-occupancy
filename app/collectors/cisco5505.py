@@ -46,7 +46,7 @@ class Cisco5505Collector(BaseCollector):
 
         if not host or not username or not password:
             logger.error("site %s: missing host or credentials", self.site_id)
-            return {s: 0 for s in ssids}
+            return None
 
         counts = {s: 0 for s in ssids}
 
@@ -82,5 +82,6 @@ class Cisco5505Collector(BaseCollector):
 
         except Exception as exc:
             logger.error("site %s Cisco 5505 SSH poll failed: %s", self.site_id, exc)
+            return None
 
         return counts

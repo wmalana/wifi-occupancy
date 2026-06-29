@@ -18,7 +18,7 @@ class MistCollector(BaseCollector):
         site_id = self.config.get("mist_site_id", "")
         if not token or not site_id:
             logger.error("site %s: missing MIST_API_TOKEN or mist_site_id", self.site_id)
-            return {s: 0 for s in ssids}
+            return None
 
         # Accept either a host root ("https://api.ac2.mist.com") or a full base
         # that already includes the API path ("https://api.ac2.mist.com/api/v1").
@@ -43,5 +43,6 @@ class MistCollector(BaseCollector):
 
         except Exception as exc:
             logger.error("site %s Mist poll failed: %s", self.site_id, exc)
+            return None
 
         return counts
