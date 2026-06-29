@@ -22,6 +22,24 @@ function formatTs(iso) {
   return new Date(iso).toLocaleString();
 }
 
+// ── Data freshness ───────────────────────────────────────────────────────────
+// Polls happen every 15 min, so anything under 20 min is healthy. Pure function
+// (takes an age in ms, returns a CSS class + label) so the thresholds are easy
+// to reason about and test in isolation.
+function freshnessFromAge(ageMs) {
+  const MIN = 60 * 1000;
+  if (ageMs < 20 * MIN) return { cls: 'dot-fresh', label: 'Fresh — under 20 min old' };
+  if (ageMs < 60 * MIN) return { cls: 'dot-aging', label: 'Aging — under 1 hour old' };
+  return { cls: 'dot-stale', label: 'Stale — over 1 hour old' };
+}
+
+// Render a colored dot for a polled-at timestamp, or nothing if unknown.
+function freshnessDot(iso) {
+  if (!iso) return '';
+  const f = freshnessFromAge(Date.now() - new Date(iso).getTime());
+  return `<span class="dot ${f.cls}" title="${f.label}"></span>`;
+}
+
 function getSelectedSite() {
   return document.getElementById('site-filter').value;
 }
@@ -65,7 +83,7 @@ async function loadCards() {
       card.innerHTML = `
         <h3>${info.name}</h3>
         ${rows}
-        <div class="card-footer">Polled ${formatTs(polledAt)}</div>`;
+        <div class="card-footer">${freshnessDot(polledAt)}Polled ${formatTs(polledAt)}</div>`;
       container.appendChild(card);
     }
 
