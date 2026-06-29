@@ -27,6 +27,9 @@ def _get_collector(platform: str, site_id: str, config: dict):
     if platform == "cisco9800":
         from app.collectors.cisco9800 import Cisco9800Collector
         return Cisco9800Collector(site_id, config)
+    if platform == "cisco9800cli":
+        from app.collectors.cisco9800_cli import Cisco9800CliCollector
+        return Cisco9800CliCollector(site_id, config)
     if platform == "cisco5505":
         from app.collectors.cisco5505 import Cisco5505Collector
         return Cisco5505Collector(site_id, config)

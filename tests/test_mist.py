@@ -72,6 +72,34 @@ def test_uses_correct_url_and_auth_header(monkeypatch):
     assert kwargs["headers"]["Authorization"] == "Token fake-token"
 
 
+def test_region_base_url_override(monkeypatch):
+    """MIST_API_BASE overrides the default host (e.g. for the ac2 region)."""
+    monkeypatch.setenv("MIST_API_TOKEN", "fake-token")
+    monkeypatch.setenv("MIST_API_BASE", "https://api.ac2.mist.com")
+    collector = MistCollector("site-1", {"mist_site_id": "abc123"})
+    factory = _fake_httpx_client([])
+
+    with patch("app.collectors.mist.httpx.Client", factory):
+        collector.collect(SSIDS)
+
+    url = factory.return_value.__enter__.return_value.get.call_args.args[0]
+    assert url == "https://api.ac2.mist.com/api/v1/sites/abc123/stats/clients"
+
+
+def test_region_base_url_with_api_path(monkeypatch):
+    """MIST_API_BASE may include /api/v1 already — must not double it up."""
+    monkeypatch.setenv("MIST_API_TOKEN", "fake-token")
+    monkeypatch.setenv("MIST_API_BASE", "https://api.eu.mist.com/api/v1")
+    collector = MistCollector("site-1", {"mist_site_id": "abc123"})
+    factory = _fake_httpx_client([])
+
+    with patch("app.collectors.mist.httpx.Client", factory):
+        collector.collect(SSIDS)
+
+    url = factory.return_value.__enter__.return_value.get.call_args.args[0]
+    assert url == "https://api.eu.mist.com/api/v1/sites/abc123/stats/clients"
+
+
 def test_missing_token_returns_zeros(monkeypatch):
     """No API token -> return zero counts, never call the API."""
     monkeypatch.delenv("MIST_API_TOKEN", raising=False)
