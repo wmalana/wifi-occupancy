@@ -1,0 +1,29 @@
+sites:
+  # --- Juniper Mist sites ---
+  - id: site-mist-example
+    name: HQ (Mist)
+    platform: mist
+    mist_site_id: "REPLACE_WITH_MIST_SITE_ID"
+    mist_org_id: "REPLACE_WITH_MIST_ORG_ID"
+
+  # --- Cisco Catalyst 9800 sites (NETCONF) ---
+  - id: site-9800-example
+    name: Branch A (Cisco 9800)
+    platform: cisco9800
+    host: "10.0.0.1"
+    username_env: CISCO_USER   # env var name holding the username
+    password_env: CISCO_PASS   # env var name holding the password
+    port: 830                  # NETCONF port (default 830)
+
+  # --- Cisco legacy 5505 sites (SSH) ---
+  - id: site-5505-example
+    name: Legacy Site B (Cisco 5505)
+    platform: cisco5505
+    host: "10.0.0.2"
+    username_env: CISCO_USER
+    password_env: CISCO_PASS
+    port: 22
+
+ssids:
+  - grainger
+  - wwg-net
