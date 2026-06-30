@@ -114,17 +114,52 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 .dot-aging { background: #f9a825; }  /* yellow — under 1 hour */
 .dot-stale { background: #c62828; }  /* red    — over 1 hour */
 
-/* Chart section */
-#chart-section {
+/* Table section */
+#table-section {
   background: #fff;
   border-radius: 10px;
   padding: 1.5rem;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow-x: auto;
 }
 
-#chart-section h2 { font-size: 1rem; margin-bottom: 1rem; color: #333; }
+#table-section h2 { font-size: 1rem; margin-bottom: 1rem; color: #333; }
 
-#trend-chart { width: 100% !important; max-height: 400px; }
+.data-table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.data-table th, .data-table td {
+  border: 1px solid #eef0f3;
+  padding: 0.35rem 0.6rem;
+  text-align: right;
+}
+.data-table thead th {
+  background: #f7f8fa;
+  color: #555;
+  font-weight: 600;
+}
+.data-table .site-col {
+  text-align: left;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  background: #fff;
+}
+.data-table thead .site-col { background: #f7f8fa; z-index: 1; }
+.data-table tbody tr:nth-child(even) td { background: #fafbfc; }
+.data-table tbody tr:nth-child(even) .site-col { background: #fafbfc; }
+
+/* One value per tracked SSID, stacked per cell */
+.data-table td .cell-val { display: block; line-height: 1.35; font-weight: 600; }
+.cell-empty { color: #ccc; font-weight: 400; }
+
+.table-legend {
+  font-size: 0.8rem;
+  color: #777;
+  margin-bottom: 0.85rem;
+}
 
 /* Empty state */
 .empty { color: #999; text-align: center; padding: 2rem; }
