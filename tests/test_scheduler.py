@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.scheduler as sched
-from app.models import Base, ClientCount
+from app.models import Base, ClientCount, Site
 
 
 def _setup(monkeypatch, sites, collectors):
@@ -59,6 +59,56 @@ def test_failed_poll_writes_nothing(monkeypatch):
 
     assert "bad" not in by_site  # failed poll wrote nothing
     assert sorted(by_site["ok"]) == [("grainger", 5), ("wwg-net", 3)]
+
+
+def test_placeholder_site_registered_but_not_polled(monkeypatch):
+    """A placeholder site is upserted (so it shows on the dashboard) but never
+    polled and never gets count rows."""
+    sites = [
+        {"id": "real", "platform": "x", "name": "Real Site"},
+        {"id": "zoro", "platform": "placeholder", "name": "Zoro"},
+    ]
+    collectors = {"real": _FakeCollector({"grainger": 4, "wwg-net": 0})}
+    Session = _setup(monkeypatch, sites, collectors)
+
+    requested = []
+    monkeypatch.setattr(
+        sched, "_get_collector",
+        lambda platform, site_id, cfg: (requested.append(site_id), collectors[site_id])[1],
+    )
+
+    sched.poll_all_sites()
+
+    db = Session()
+    site_ids = {s.id for s in db.query(Site).all()}
+    counts_sites = {r.site_id for r in db.query(ClientCount).all()}
+    db.close()
+
+    assert "zoro" in site_ids          # registered for the dashboard
+    assert "zoro" not in counts_sites  # but no count rows
+    assert "zoro" not in requested     # collector never even requested
+    assert "real" in counts_sites      # the real site still polled normally
+
+
+def test_converting_a_site_to_placeholder_updates_platform(monkeypatch):
+    """Re-polling an existing site with a new platform updates the stored value
+    (so /api/sites reflects the conversion to a placeholder)."""
+    sites = [{"id": "s1", "platform": "x", "name": "S1"}]
+    collectors = {"s1": _FakeCollector({"grainger": 2, "wwg-net": 1})}
+    Session = _setup(monkeypatch, sites, collectors)
+
+    sched.poll_all_sites()  # first poll as a real site
+
+    monkeypatch.setattr(sched, "_load_config", lambda: {
+        "ssids": ["grainger", "wwg-net"],
+        "sites": [{"id": "s1", "platform": "placeholder", "name": "S1"}],
+    })
+    sched.poll_all_sites()  # re-poll after converting to placeholder
+
+    db = Session()
+    platform = db.get(Site, "s1").platform
+    db.close()
+    assert platform == "placeholder"
 
 
 def test_genuine_zero_counts_are_written(monkeypatch):

@@ -53,42 +53,64 @@ function getDays() {
 async function loadCards() {
   const container = document.getElementById('cards');
   try {
-    const latest = await fetchJSON('/api/counts/latest');
+    // Drive cards off the full site list so configured-but-unreported sites
+    // (placeholders, or sites awaiting their first poll) still show a card.
+    const [latest, sites] = await Promise.all([
+      fetchJSON('/api/counts/latest'),
+      fetchJSON('/api/sites'),
+    ]);
     const siteFilter = getSelectedSite();
 
     const bySite = {};
     for (const row of latest) {
-      if (siteFilter && row.site_id !== siteFilter) continue;
-      if (!bySite[row.site_id]) bySite[row.site_id] = { name: row.site_name, ssids: [] };
-      bySite[row.site_id].ssids.push(row);
+      if (!bySite[row.site_id]) bySite[row.site_id] = [];
+      bySite[row.site_id].push(row);
     }
 
-    if (Object.keys(bySite).length === 0) {
-      container.innerHTML = '<p class="empty">No data yet — waiting for first poll.</p>';
+    const visibleSites = sites.filter(s => !siteFilter || s.id === siteFilter);
+    if (visibleSites.length === 0) {
+      container.innerHTML = '<p class="empty">No sites configured yet.</p>';
       return;
     }
 
     container.innerHTML = '';
-    for (const [siteId, info] of Object.entries(bySite)) {
+    for (const site of visibleSites) {
+      const rows = bySite[site.id] || [];
+      // A placeholder always shows as pending, even if it has stale historical
+      // rows from before it was converted.
+      const isPlaceholder = site.platform === 'placeholder';
       const card = document.createElement('div');
-      card.className = 'card';
 
-      const rows = info.ssids.map(r => `
-        <div class="ssid-row">
-          <span class="ssid-name ${ssidClass(r.ssid)}">${r.ssid}</span>
-          <span class="ssid-count">${r.client_count.toLocaleString()}</span>
-        </div>`).join('');
-
-      const polledAt = info.ssids[0]?.polled_at ?? '';
-      card.innerHTML = `
-        <h3>${info.name}</h3>
-        ${rows}
-        <div class="card-footer">${freshnessDot(polledAt)}Polled ${formatTs(polledAt)}</div>`;
+      if (rows.length && !isPlaceholder) {
+        card.className = 'card';
+        const ssidRows = rows.map(r => `
+          <div class="ssid-row">
+            <span class="ssid-name ${ssidClass(r.ssid)}">${r.ssid}</span>
+            <span class="ssid-count">${r.client_count.toLocaleString()}</span>
+          </div>`).join('');
+        const polledAt = rows[0]?.polled_at ?? '';
+        card.innerHTML = `
+          <h3>${site.name}</h3>
+          ${ssidRows}
+          <div class="card-footer">${freshnessDot(polledAt)}Polled ${formatTs(polledAt)}</div>`;
+      } else {
+        // No poll data: placeholder, or a real site that hasn't reported yet.
+        card.className = 'card card-pending';
+        const label = isPlaceholder ? 'Placeholder' : 'No data yet';
+        card.innerHTML = `
+          <h3>${site.name}</h3>
+          <div class="pending-body">${label}</div>
+          <div class="card-footer">Not yet reporting</div>`;
+      }
       container.appendChild(card);
     }
 
-    // Update header timestamp
-    const times = latest.map(r => r.polled_at).filter(Boolean).sort();
+    // Update header timestamp (ignore placeholder sites' stale historical rows)
+    const placeholderIds = new Set(
+      sites.filter(s => s.platform === 'placeholder').map(s => s.id));
+    const times = latest
+      .filter(r => !placeholderIds.has(r.site_id))
+      .map(r => r.polled_at).filter(Boolean).sort();
     const newest = times[times.length - 1];
     document.getElementById('last-updated').textContent =
       newest ? `Last updated ${formatTs(newest)}` : '';
@@ -107,8 +129,15 @@ async function loadChart() {
   if (siteFilter) params.set('site_id', siteFilter);
 
   try {
-    const daily = await fetchJSON(`/api/counts/daily?${params}`);
-    buildChart(daily);
+    const [daily, sites] = await Promise.all([
+      fetchJSON(`/api/counts/daily?${params}`),
+      fetchJSON('/api/sites'),
+    ]);
+    // Don't plot history for placeholder sites (e.g. a real site converted to
+    // a placeholder still has old rows in /api/counts/daily).
+    const placeholders = new Set(
+      sites.filter(s => s.platform === 'placeholder').map(s => s.id));
+    buildChart(daily.filter(r => !placeholders.has(r.site_id)));
   } catch (err) {
     console.error('Chart load error:', err);
   }
