@@ -5,6 +5,13 @@ const SSID_COLORS = {
   'wwg-net':  { border: '#880e4f', bg: 'rgba(136,14,79,0.15)' },
 };
 
+// Fallback colors for SSIDs not in SSID_COLORS, so the UI stays correct for any
+// configured SSID list rather than just the default pair.
+const SSID_PALETTE = ['#1565c0', '#880e4f', '#2e7d32', '#e65100', '#4a148c', '#00838f', '#827717'];
+function ssidColor(ssid, idx) {
+  return SSID_COLORS[ssid]?.border ?? SSID_PALETTE[idx % SSID_PALETTE.length];
+}
+
 function ssidClass(ssid) {
   return 'ssid-' + ssid.replace(/[^a-z0-9]/g, '-');
 }
@@ -120,85 +127,85 @@ async function loadCards() {
   }
 }
 
-// ── Trend chart ──────────────────────────────────────────────────────────────
+// ── Site × date table ────────────────────────────────────────────────────────
 
-async function loadChart() {
+async function loadTable() {
+  const wrap = document.getElementById('data-table-wrap');
+  const legendEl = document.getElementById('table-legend');
   const days = getDays();
   const siteFilter = getSelectedSite();
   const params = new URLSearchParams({ days });
   if (siteFilter) params.set('site_id', siteFilter);
-
   try {
-    const [daily, sites] = await Promise.all([
-      fetchJSON(`/api/counts/daily?${params}`),
+    const [sites, daily] = await Promise.all([
       fetchJSON('/api/sites'),
+      fetchJSON(`/api/counts/daily?${params}`),
     ]);
-    // Don't plot history for placeholder sites (e.g. a real site converted to
-    // a placeholder still has old rows in /api/counts/daily).
-    const placeholders = new Set(
+    // Drop placeholder sites' stale history before anything downstream, so it
+    // can't leak bogus SSIDs into the legend or values into cells.
+    const placeholderIds = new Set(
       sites.filter(s => s.platform === 'placeholder').map(s => s.id));
-    buildChart(daily.filter(r => !placeholders.has(r.site_id)));
+    const liveDaily = daily.filter(r => !placeholderIds.has(r.site_id));
+
+    // SSIDs are derived from the data — never hard-coded — so the view matches
+    // whatever the deployment tracks. With no data we show a neutral empty grid.
+    const ssids = [...new Set(liveDaily.map(r => r.ssid))].sort();
+    legendEl.innerHTML = ssids.length
+      ? ssids.map((s, i) => `<span style="color:${ssidColor(s, i)};font-weight:600">${s}</span>`)
+          .join(' · ') + ' peak clients per day'
+      : 'Peak clients per day — no data in this window yet';
+    const rows = sites.filter(s => !siteFilter || s.id === siteFilter);
+    wrap.innerHTML = buildTable(rows, days, liveDaily, ssids);
   } catch (err) {
-    console.error('Chart load error:', err);
+    wrap.innerHTML = `<p class="empty">Error loading table: ${err.message}</p>`;
   }
 }
 
-function buildChart(daily) {
-  // Collect all unique dates and series keys
-  const dates = [...new Set(daily.map(r => r.date))].sort();
+// Build a site (rows) × date (columns) table of daily peak counts. Each cell
+// stacks one value per tracked SSID (color-coded). Empty cells show a dot.
+function buildTable(sites, days, daily, ssids) {
+  // Use UTC throughout: the backend aggregates by DATE(polled_at) in UTC, so
+  // local-time columns would mismatch the data near the UTC day boundary.
+  const dates = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() - i);
+    dates.push(d);
+  }
+  const iso = d => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  const fmt = d => `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
 
-  // Group by "site_id|ssid"
-  const seriesMap = {};
+  // Index the daily peaks: peaks[site_id][date][ssid] = max_count
+  const peaks = {};
   for (const r of daily) {
-    const key = `${r.site_name} · ${r.ssid}`;
-    if (!seriesMap[key]) seriesMap[key] = { ssid: r.ssid, data: {} };
-    seriesMap[key].data[r.date] = r.max_count;
+    ((peaks[r.site_id] ??= {})[r.date] ??= {})[r.ssid] = r.max_count;
   }
 
-  const palette = [
-    '#1565c0','#880e4f','#2e7d32','#e65100','#4a148c',
-    '#00838f','#827717','#6a1b9a','#c62828','#00695c',
-  ];
-  let colorIdx = 0;
+  if (sites.length === 0) return '<p class="empty">No sites to show.</p>';
 
-  const datasets = Object.entries(seriesMap).map(([label, info]) => {
-    const color = SSID_COLORS[info.ssid]?.border ?? palette[colorIdx++ % palette.length];
-    const bg    = SSID_COLORS[info.ssid]?.bg    ?? color + '26';
-    return {
-      label,
-      data: dates.map(d => info.data[d] ?? null),
-      borderColor: color,
-      backgroundColor: bg,
-      tension: 0.3,
-      fill: false,
-      spanGaps: true,
-      pointRadius: dates.length <= 14 ? 4 : 2,
-    };
-  });
+  const cellVal = (v, color) => v == null
+    ? '<span class="cell-val cell-empty">·</span>'
+    : `<span class="cell-val" style="color:${color}">${v}</span>`;
 
-  const ctx = document.getElementById('trend-chart').getContext('2d');
-
-  if (trendChart) trendChart.destroy();
-  trendChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: dates, datasets },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { position: 'bottom' },
-        tooltip: {
-          callbacks: {
-            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? '—'} clients`,
-          },
-        },
-      },
-      scales: {
-        x: { title: { display: true, text: 'Date' } },
-        y: { title: { display: true, text: 'Peak client count' }, beginAtZero: true },
-      },
-    },
-  });
+  let html = '<table class="data-table"><thead><tr><th class="site-col">Site</th>';
+  for (const d of dates) html += `<th>${fmt(d)}</th>`;
+  html += '</tr></thead><tbody>';
+  for (const s of sites) {
+    // Placeholder sites render empty even if they have stale historical rows.
+    const isPlaceholder = s.platform === 'placeholder';
+    html += `<tr><td class="site-col">${s.name}</td>`;
+    for (const d of dates) {
+      const day = isPlaceholder ? {} : (peaks[s.id]?.[iso(d)] ?? {});
+      const inner = ssids.length
+        ? ssids.map((ssid, i) => cellVal(day[ssid], ssidColor(ssid, i))).join('')
+        : '<span class="cell-val cell-empty">·</span>';
+      html += `<td>${inner}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
 }
 
 // ── Site filter population ───────────────────────────────────────────────────
@@ -219,11 +226,11 @@ async function populateSiteFilter() {
 // ── Init & refresh ───────────────────────────────────────────────────────────
 
 async function refresh() {
-  await Promise.all([loadCards(), loadChart()]);
+  await Promise.all([loadCards(), loadTable()]);
 }
 
 document.getElementById('site-filter').addEventListener('change', refresh);
-document.getElementById('days-select').addEventListener('change', loadChart);
+document.getElementById('days-select').addEventListener('change', loadTable);
 
 populateSiteFilter().then(refresh);
 

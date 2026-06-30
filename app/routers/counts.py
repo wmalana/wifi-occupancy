@@ -40,8 +40,10 @@ def daily_counts(
     db: Session = Depends(get_db),
 ):
     """Return daily aggregates (max and avg) per site per SSID for the past N days."""
+    # Last N days *including today* → floor at today-(N-1), so a 7-day window
+    # returns exactly 7 dates (not 8) and matches the dashboard's N columns.
     filters = "WHERE DATE(cc.polled_at) >= DATE('now', :offset)"
-    params: dict = {"offset": f"-{days} days"}
+    params: dict = {"offset": f"-{days - 1} days"}
     if site_id:
         filters += " AND cc.site_id = :site_id"
         params["site_id"] = site_id
