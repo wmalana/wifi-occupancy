@@ -69,7 +69,14 @@ def poll_all_sites():
                 db.add(site)
             else:
                 site.name = site_cfg.get("name", site_id)
+                site.platform = platform
                 site.config_json = json.dumps(site_cfg)
+
+            # Placeholder sites are registered (so they appear on the dashboard
+            # as "pending") but never polled.
+            if platform == "placeholder":
+                logger.info("site %s is a placeholder; not polling", site_id)
+                continue
 
             try:
                 collector = _get_collector(platform, site_id, site_cfg)
