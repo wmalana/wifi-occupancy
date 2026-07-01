@@ -1,28 +1,63 @@
 sites:
-  # --- Juniper Mist sites ---
-  - id: site-mist-example
-    name: HQ (Mist)
+  # --- Juniper Mist (ac2 region) ---
+  - id: g36-chicago
+    name: "G36 - Chicago IL (Mart)"
     platform: mist
-    mist_site_id: "REPLACE_WITH_MIST_SITE_ID"
-    mist_org_id: "REPLACE_WITH_MIST_ORG_ID"
+    mist_site_id: "55df860b-128c-4178-b6f9-72ac54383d48"
+    mist_org_id: "76a26db4-f2dc-47c3-a7c7-3f0ecff73921"
 
-  # --- Cisco Catalyst 9800 sites (NETCONF) ---
-  - id: site-9800-example
-    name: Branch A (Cisco 9800)
-    platform: cisco9800
-    host: "10.0.0.1"
-    username_env: CISCO_USER   # env var name holding the username
-    password_env: CISCO_PASS   # env var name holding the password
-    port: 830                  # NETCONF port (default 830)
+  - id: g55-jacksonville
+    name: "G55 - Jacksonville FL"
+    platform: mist
+    mist_site_id: "04664df8-877e-4c2a-bf84-95a3427ad9ac"
+    mist_org_id: "76a26db4-f2dc-47c3-a7c7-3f0ecff73921"
 
-  # --- Cisco legacy 5505 sites (SSH) ---
-  - id: site-5505-example
-    name: Legacy Site B (Cisco 5505)
-    platform: cisco5505
-    host: "10.0.0.2"
+  # --- LFHQ Cisco Catalyst 9800 (CLI-only; NETCONF/830 is blocked here) ---
+  - id: lfhq-9800
+    name: "Lake Forest HQ (Cisco 9800)"
+    platform: cisco9800cli
+    host: "c100wlc1.100.grainger.com"
     username_env: CISCO_USER
     password_env: CISCO_PASS
     port: 22
+
+  # --- Janesville branch, Cisco 5500-series (AireOS) ---
+  - id: janesville-5500
+    name: "Janesville (Cisco 5500 AireOS)"
+    platform: cisco5500
+    host: "b0780wlc1.branch.grainger.com"
+    username_env: CISCO_USER
+    password_env: CISCO_PASS
+    port: 22
+
+  # --- G10 San Antonio, Cisco 5500-series (AireOS) ---
+  # SSH banner confirmed "SSH-2.0-CISCO_WLC" (same AireOS family as Janesville).
+  - id: g10-san-antonio
+    name: "G10 - San Antonio"
+    platform: cisco5500
+    host: "g10wlc1.g10.grainger.com"
+    username_env: CISCO_USER
+    password_env: CISCO_PASS
+    port: 22
+
+  # --- NCC Tempe, AZ, Cisco 5500-series (AireOS) ---
+  # SSH banner confirmed "SSH-2.0-CISCO_WLC" (same AireOS family as Janesville).
+  - id: ncc-tempe
+    name: "NCC - Tempe, AZ"
+    platform: cisco5500
+    host: "ncc607wlc1.ncc.grainger.com"
+    username_env: CISCO_USER
+    password_env: CISCO_PASS
+    port: 22
+
+  # --- GCAN Thornhill, ON ---
+  # cvd-wlc01.acklands.ca does not resolve from this environment (different
+  # domain/network path than *.grainger.com). Registered as a placeholder so
+  # it shows on the dashboard as pending; flip to a real platform once
+  # reachability + controller type are confirmed.
+  - id: gcan-thornhill
+    name: "GCAN - Thornhill, ON"
+    platform: placeholder
 
 ssids:
   - grainger
