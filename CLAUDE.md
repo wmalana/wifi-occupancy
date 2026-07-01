@@ -61,7 +61,7 @@ Request/serve and background polling are two separate paths sharing one SQLite D
     (default `https://api.mist.com`; set per region, e.g. `https://api.ac2.mist.com`).
   - `cisco9800.py` — Cisco Catalyst 9800 via **NETCONF** (ncclient, port 830);
     parses `ms-assoc-ssid` from `client-oper-data` YANG XML.
-  - `cisco9800cli.py` — Cisco 9800 via the **SSH CLI** (port 22), for when NETCONF
+  - `cisco9800_cli.py` — Cisco 9800 via the **SSH CLI** (port 22), for when NETCONF
     isn't reachable. Maps WLAN id → SSID via `show wlan summary`, counts clients per
     WLAN id via `show wireless client summary`.
   - `cisco5500.py` — Cisco 5500-series **AireOS** WLC via SSH. Interactive
@@ -115,5 +115,5 @@ Request/serve and background polling are two separate paths sharing one SQLite D
 plus the CLI/AireOS collectors, regional Mist support, placeholder sites, and the
 peak-counts table. Still open: capacity %, summary endpoint, peak-hours heatmap,
 anomaly detection, CSV export, Slack/email digest. Two known follow-ups: purge
-orphaned sites removed from config, and bring `cisco9800cli`'s read loop in line
+orphaned sites removed from config, and bring `cisco9800_cli`'s read loop in line
 with `cisco5500`'s raise-on-timeout.
