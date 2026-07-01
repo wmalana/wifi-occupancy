@@ -4,36 +4,59 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WiFi Occupancy Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <header>
-    <h1>WiFi Occupancy Tracker</h1>
-    <span id="last-updated">Loading…</span>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-mark">W</div>
+      <div class="brand-text">
+        <h1>WiFi Occupancy Tracker</h1>
+        <span id="site-summary" class="brand-subtitle">Loading…</span>
+      </div>
+    </div>
+    <div class="updated">
+      <span class="updated-label">Last updated</span>
+      <span id="last-updated" class="updated-value">—</span>
+    </div>
   </header>
 
-  <main>
-    <div class="controls">
-      <label for="site-filter">Filter site:</label>
+  <div class="filterbar">
+    <div class="filter-group">
+      <label for="site-filter">Site</label>
       <select id="site-filter">
         <option value="">All sites</option>
       </select>
+    </div>
 
-      <label for="days-select">Trend window:</label>
+    <div class="filter-group">
+      <label for="days-select">Trend window</label>
       <select id="days-select">
-        <option value="7">Last 7 days</option>
         <option value="14">Last 14 days</option>
         <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
       </select>
     </div>
 
-    <div id="cards"><p class="loading">Loading current counts…</p></div>
+    <div class="legend" id="header-legend"></div>
+  </div>
 
-    <div id="table-section">
+  <main>
+    <section class="card" id="site-table-card">
+      <div id="site-table-wrap"><p class="loading">Loading current counts…</p></div>
+    </section>
+
+    <section class="card trend-card">
       <h2>Daily peak client counts</h2>
-      <div class="table-legend" id="table-legend"></div>
-      <div id="data-table-wrap"></div>
-    </div>
+      <p class="trend-subtitle" id="table-legend"></p>
+      <div class="table-scroll" id="data-table-wrap"></div>
+    </section>
   </main>
 
   <script src="/app.js"></script>
